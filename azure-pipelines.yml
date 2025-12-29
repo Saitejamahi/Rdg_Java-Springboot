@@ -24,6 +24,7 @@ stages:
   - job: MavenPackageAndPublishArtifacts
     displayName: Maven Package and Publish Artifacts
     pool:
+      name: self-hosted-pool1
       vmImage: $(vmImageName)
     
     steps:
