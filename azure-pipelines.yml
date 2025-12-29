@@ -1,25 +1,43 @@
+trigger:
+- master
+
+variables:
+  dockerRegistryServiceConnection: 'ACR-Service-Connection'
+  imageRepository: 'springboot-app'
+  containerRegistry: 'springbootacr.azurecr.io'
+  dockerfilePath: 'Dockerfile'
+  tag: '$(Build.BuildId)'
+  azureSubscription: 'Azure-DevOps-Service-Connection'
+  webAppName: 'java-spring-boot-container'
+
 pool:
   name: self-hosted-pool1
-  demands:
-    - maven
 
 steps:
+# 1. Build JAR with Maven
 - task: Maven@3
-  displayName: 'Build Maven app'
+  displayName: 'Build Spring Boot JAR'
   inputs:
     mavenPomFile: 'app/pom.xml'
     goals: 'clean package -DskipTests'
-    mavenOptions: '-Xmx1024m -XX:MaxMetaspaceSize=256m'
 
-- task: CopyFiles@2
-  displayName: 'Copy JAR'
+# 2. Build & Push Docker Image
+- task: Docker@2
+  displayName: 'Build and Push Docker Image'
   inputs:
-    SourceFolder: '$(System.DefaultWorkingDirectory)'
-    Contents: '**/target/*.jar'
-    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    command: buildAndPush
+    repository: $(imageRepository)
+    dockerfile: $(dockerfilePath)
+    containerRegistry: $(dockerRegistryServiceConnection)
+    tags: |
+      $(tag)
+      latest
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact'
+# 3. Deploy Container to Azure App Service
+- task: AzureWebAppContainer@1
+  displayName: 'Deploy to Azure Web App (Container)'
   inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
+    azureSubscription: $(azureSubscription)
+    appName: $(webAppName)
+    containers: |
+      $(containerRegistry)/$(imageRepository):latest
