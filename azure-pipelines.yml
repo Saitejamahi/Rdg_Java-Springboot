@@ -25,7 +25,7 @@ stages:
         workingDirectory: 'app'
         tasks: 'clean bootJar'
         javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '17'
+        jdkVersionOption: '1.8'
 
     - task: Docker@2
       displayName: Build and Push Image
