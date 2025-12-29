@@ -4,7 +4,6 @@ trigger:
 variables:
   azureSubscription: 'Azure-DevOps-Service-Connection'
   webAppName: 'java-spring-boot'
-  vmImageName: 'ubuntu-latest'
 
 stages:
 - stage: Build
@@ -17,14 +16,15 @@ stages:
     - task: Gradle@2
       displayName: Build Spring Boot JAR
       inputs:
-        gradleWrapperFile: 'gradlew'
+        gradleWrapperFile: 'app/gradlew'
+        workingDirectory: 'app'
         tasks: 'clean build'
         publishJUnitResults: false
 
     - task: CopyFiles@2
       inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)'
-        Contents: '**/build/libs/*.jar'
+        SourceFolder: 'app'
+        Contents: 'build/libs/*.jar'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
     - task: PublishPipelineArtifact@1
