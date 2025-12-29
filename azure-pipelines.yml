@@ -2,59 +2,49 @@ trigger:
 - master
 
 variables:
+  dockerRegistryServiceConnection: 'ACR-Service-Connection'
+  imageRepository: 'springboot-app'
+  containerRegistry: 'springbootacr.azurecr.io'
+  dockerfilePath: 'Dockerfile'
+  tag: '$(Build.BuildId)'
   azureSubscription: 'Azure-DevOps-Service-Connection'
-  webAppName: 'java-spring-boot'
+  webAppName: 'java-spring-boot-container'
 
 stages:
-# ================= BUILD STAGE =================
 - stage: Build
-  displayName: Build stage
+  displayName: Build and Push Docker Image
   jobs:
-  - job: BuildJob
-    displayName: Maven Package and Publish Artifact
+  - job: Build
     pool:
       name: self-hosted-pool1
-
     steps:
     - task: Maven@3
-      displayName: 'Maven Package'
       inputs:
-        mavenPomFile: 'app/pom.xml'
+        mavenPomFile: 'pom.xml'
         goals: 'clean package'
 
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish JAR Artifact'
+    - task: Docker@2
+      displayName: Build and Push Image
       inputs:
-        targetPath: 'app/target'
-        artifact: 'drop'
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
 
-# ================= DEPLOY STAGE =================
 - stage: Deploy
-  displayName: Deploy stage
+  displayName: Deploy to Azure App Service
   dependsOn: Build
-  condition: succeeded()
-
   jobs:
-  - deployment: DeployLinuxWebApp
-    displayName: Deploy Linux Web App
-    environment: 'development'
+  - job: Deploy
     pool:
       name: self-hosted-pool1
-
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download Artifact'
-            inputs:
-              artifact: 'drop'
-              path: '$(Pipeline.Workspace)/drop'
-
-          - task: AzureWebApp@1
-            displayName: 'Deploy Spring Boot JAR'
-            inputs:
-              azureSubscription: $(azureSubscription)
-              appType: 'webAppLinux'
-              appName: $(webAppName)
-              package: '$(Pipeline.Workspace)/drop/*.jar'
+    steps:
+    - task: AzureWebAppContainer@1
+      inputs:
+        azureSubscription: $(azureSubscription)
+        appName: $(webAppName)
+        containers: |
+          $(containerRegistry)/$(imageRepository):latest
