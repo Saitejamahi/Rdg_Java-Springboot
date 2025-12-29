@@ -52,16 +52,9 @@ stages:
               path: '$(Pipeline.Workspace)/drop'
 
           - task: AzureWebApp@1
-            displayName: 'Deploy to Azure Web App'
+            displayName: 'Deploy Spring Boot JAR'
             inputs:
               azureSubscription: $(azureSubscription)
               appType: 'webAppLinux'
               appName: $(webAppName)
               package: '$(Pipeline.Workspace)/drop/*.jar'
-          - task: AzureRmWebAppDeployment@5
-            inputs:
-              ConnectionType: 'AzureRM'
-              azureSubscription: 'Azure-DevOps-Service-Connection'
-              appType: 'webApp'
-              WebAppName: 'spring-boot'
-              packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
