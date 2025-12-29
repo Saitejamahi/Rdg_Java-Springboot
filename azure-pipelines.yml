@@ -4,57 +4,53 @@ trigger:
 variables:
   azureSubscription: 'Azure-DevOps-Service-Connection'
   webAppName: 'java-spring-boot'
+  vmImageName: 'ubuntu-latest'
 
 stages:
-# ================= BUILD STAGE =================
 - stage: Build
-  displayName: Build stage
+  displayName: Build
   jobs:
-  - job: BuildJob
-    displayName: Maven Package and Publish Artifact
+  - job: BuildGradle
     pool:
       name: self-hosted-pool1
-
     steps:
-    - task: Maven@3
-      displayName: 'Maven Package'
+    - task: Gradle@2
+      displayName: Build Spring Boot JAR
       inputs:
-        mavenPomFile: 'app/pom.xml'
-        goals: 'clean package'
+        gradleWrapperFile: 'gradlew'
+        tasks: 'clean build'
+        publishJUnitResults: false
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(System.DefaultWorkingDirectory)'
+        Contents: '**/build/libs/*.jar'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
     - task: PublishPipelineArtifact@1
-      displayName: 'Publish JAR Artifact'
       inputs:
-        targetPath: 'app/target'
+        targetPath: '$(Build.ArtifactStagingDirectory)'
         artifact: 'drop'
 
-# ================= DEPLOY STAGE =================
 - stage: Deploy
-  displayName: Deploy stage
+  displayName: Deploy
   dependsOn: Build
-  condition: succeeded()
-
   jobs:
-  - deployment: DeployLinuxWebApp
-    displayName: Deploy Linux Web App
-    environment: 'development'
+  - deployment: DeployWebApp
+    environment: development
     pool:
       name: self-hosted-pool1
-
     strategy:
       runOnce:
         deploy:
           steps:
           - task: DownloadPipelineArtifact@2
-            displayName: 'Download Artifact'
             inputs:
               artifact: 'drop'
-              path: '$(Pipeline.Workspace)/drop'
 
           - task: AzureWebApp@1
-            displayName: 'Deploy to Azure Web App'
             inputs:
               azureSubscription: $(azureSubscription)
-              appType: 'webAppLinux'
+              appType: webAppLinux
               appName: $(webAppName)
-              package: '$(Pipeline.Workspace)/drop/*.jar'
+              package: '$(System.ArtifactsDirectory)/**/*.jar'
