@@ -1,54 +1,25 @@
-trigger:
-- master
+pool:
+  name: self-hosted-pool1
+  demands:
+    - maven
 
-variables:
-  dockerRegistryServiceConnection: 'ACR-Service-Connection'
-  imageRepository: 'springboot-app'
-  containerRegistry: 'springbootacr.azurecr.io'
-  dockerfilePath: 'Dockerfile'
-  tag: '$(Build.BuildId)'
-  azureSubscription: 'Azure-DevOps-Service-Connection'
-  webAppName: 'java-spring-boot-container'
+steps:
+- task: Maven@3
+  displayName: 'Build Maven app'
+  inputs:
+    mavenPomFile: 'app/pom.xml'
+    goals: 'clean package -DskipTests'
+    mavenOptions: '-Xmx1024m -XX:MaxMetaspaceSize=256m'
 
-stages:
-- stage: Build
-  displayName: Build & Push Docker Image
-  jobs:
-  - job: Build
-    pool:
-      name: self-hosted-pool1
-    steps:
-    - task: Gradle@3
-      displayName: Build Spring Boot JAR
-      inputs:
-        gradleWrapperFile: 'app/gradlew'
-        workingDirectory: 'app'
-        tasks: 'clean bootJar'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.8'
+- task: CopyFiles@2
+  displayName: 'Copy JAR'
+  inputs:
+    SourceFolder: '$(System.DefaultWorkingDirectory)'
+    Contents: '**/target/*.jar'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
-    - task: Docker@2
-      displayName: Build and Push Image
-      inputs:
-        command: buildAndPush
-        repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
-        tags: |
-          $(tag)
-          latest
-
-- stage: Deploy
-  displayName: Deploy Container
-  dependsOn: Build
-  jobs:
-  - job: Deploy
-    pool:
-      name: self-hosted-pool1
-    steps:
-    - task: AzureWebAppContainer@1
-      inputs:
-        azureSubscription: $(azureSubscription)
-        appName: $(webAppName)
-        containers: |
-          $(containerRegistry)/$(imageRepository):latest
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
