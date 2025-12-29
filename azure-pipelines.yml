@@ -6,51 +6,62 @@ variables:
   webAppName: 'java-spring-boot'
 
 stages:
+# ================= BUILD STAGE =================
 - stage: Build
-  displayName: Build
+  displayName: Build stage
   jobs:
-  - job: BuildGradle
+  - job: BuildJob
+    displayName: Maven Package and Publish Artifact
     pool:
       name: self-hosted-pool1
-    steps:
-    - task: Gradle@2
-      displayName: Build Spring Boot JAR
-      inputs:
-        gradleWrapperFile: 'app/gradlew'
-        workingDirectory: 'app'
-        tasks: 'clean build'
-        publishJUnitResults: false
 
-    - task: CopyFiles@2
+    steps:
+    - task: Maven@3
+      displayName: 'Maven Package'
       inputs:
-        SourceFolder: 'app'
-        Contents: 'build/libs/*.jar'
-        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        mavenPomFile: 'app/pom.xml'
+        goals: 'clean package'
 
     - task: PublishPipelineArtifact@1
+      displayName: 'Publish JAR Artifact'
       inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)'
+        targetPath: 'app/target'
         artifact: 'drop'
 
+# ================= DEPLOY STAGE =================
 - stage: Deploy
-  displayName: Deploy
+  displayName: Deploy stage
   dependsOn: Build
+  condition: succeeded()
+
   jobs:
-  - deployment: DeployWebApp
-    environment: development
+  - deployment: DeployLinuxWebApp
+    displayName: Deploy Linux Web App
+    environment: 'development'
     pool:
       name: self-hosted-pool1
+
     strategy:
       runOnce:
         deploy:
           steps:
           - task: DownloadPipelineArtifact@2
+            displayName: 'Download Artifact'
             inputs:
               artifact: 'drop'
+              path: '$(Pipeline.Workspace)/drop'
 
           - task: AzureWebApp@1
+            displayName: 'Deploy to Azure Web App'
             inputs:
               azureSubscription: $(azureSubscription)
-              appType: webAppLinux
+              appType: 'webAppLinux'
               appName: $(webAppName)
-              package: '$(System.ArtifactsDirectory)/**/*.jar'
+              package: '$(Pipeline.Workspace)/drop/*.jar'
+          - task: AzureRmWebAppDeployment@5
+            inputs:
+              ConnectionType: 'AzureRM'
+              azureSubscription: 'Azure-DevOps-Service-Connection'
+              appType: 'webApp'
+              WebAppName: 'spring-boot'
+              packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
