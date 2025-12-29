@@ -54,6 +54,7 @@ stages:
     displayName: Deploy Linux Web App
     environment: 'development'
     pool: 
+      name: self-hosted-pool1
       vmImage: $(vmImageName)
     strategy:
       runOnce:
