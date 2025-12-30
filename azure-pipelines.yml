@@ -2,7 +2,7 @@ trigger:
 - master
 
 variables:
-  dockerRegistryServiceConnection: 'ACR-Service-Connection'
+  dockerRegistryServiceConnection: 'ACRServiceConnection'
   imageRepository: 'springboot-app'
   containerRegistry: 'springbootacr.azurecr.io'
   dockerfilePath: 'Dockerfile'
