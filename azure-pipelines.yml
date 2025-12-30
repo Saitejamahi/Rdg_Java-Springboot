@@ -1,31 +1,41 @@
+trigger:
+- master
+
+variables:
+  imageRepository: 'springboot-app'
+  containerRegistry: 'springbootacr.azurecr.io'
+  dockerfilePath: 'Dockerfile'
+  tag: '$(Build.BuildId)'
+  webAppName: 'spring-boot'
+
 pool:
   name: self-hosted-pool1
 
 steps:
-# 1. Build JAR
+# 1. Build Spring Boot JAR
 - task: Maven@3
   displayName: 'Build Spring Boot JAR'
   inputs:
     mavenPomFile: 'app/pom.xml'
     goals: 'clean package -DskipTests'
 
-# 2. Docker Build & Push
+# 2. Build & Push Docker Image
 - task: Docker@2
   displayName: 'Build and Push Docker Image'
   inputs:
     command: buildAndPush
     repository: $(imageRepository)
     dockerfile: $(dockerfilePath)
-    containerRegistry: $(dockerRegistryServiceConnection)
+    containerRegistry: 'ACR-Service'
     tags: |
       $(tag)
       latest
 
-# 3. Deploy to App Service
+# 3. Deploy to Azure App Service (Container)
 - task: AzureWebAppContainer@1
-  displayName: 'Deploy Container'
+  displayName: 'Deploy to Azure Web App'
   inputs:
-    azureSubscription: $(azureSubscription)
+    azureSubscription: 'AzureServiceConnection'
     appName: $(webAppName)
     containers: |
       $(containerRegistry)/$(imageRepository):latest
