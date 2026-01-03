@@ -26,6 +26,9 @@ steps:
     mavenPomFile: 'app/pom.xml'
     goals: 'clean package -DskipTests'
     mavenOptions: '-Xmx512m'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.8'
+
 
 
 
