@@ -10,7 +10,7 @@ variables:
   imageTag: '$(Build.BuildId)'
 
   # Azure App Service
-  azureSubscription: 'ACR_Docker_Connection'
+  azureSubscription: 'Azure-DevOps-Service-Connection'
   webAppName: 'java-spring-boot-container'
 
 pool:
